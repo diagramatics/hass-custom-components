@@ -48,7 +48,7 @@ class JourneyLegStop(BaseModel):
 
     id: str
     name: str
-    disassembledName: str | None
+    disassembledName: str | None = Field(default=None)
     type: str
     # coord
     # parent
@@ -100,10 +100,10 @@ class TripTransportation(BaseModel):
     class TripTransportationProperties(BaseModel):
         realtime_trip_id: str | None = Field(alias="RealtimeTripId", default=None)
 
-    id: str | None
-    name: str | None
-    disassembledName: str | None
-    number: str | None
+    id: str | None = Field(default=None)
+    name: str | None = Field(default=None)
+    disassembledName: str | None = Field(default=None)
+    number: str | None = Field(default=None)
     # 1: Sydney Trains (product class 1)
     # 2: Intercity Trains (product class 1)
     # 3: Regional Trains (product class 1)
@@ -126,8 +126,8 @@ class TripTransportation(BaseModel):
     # 12: Private Ferries (product class 9)
     # 18: Temporary Ferries (product class 9)
     # 8: School Buses (product class 11)
-    iconId: int | None
-    description: str | None
+    iconId: int | None = Field(default=None)
+    description: str | None = Field(default=None)
     product: RouteProduct
     # operator
     # destination

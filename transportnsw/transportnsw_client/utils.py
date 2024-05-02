@@ -2,7 +2,7 @@ from typing import Iterable, Literal
 
 from google.transit import gtfs_realtime_pb2
 
-from .model import RouteProductClass, JourneyFareTicket, JourneyLeg
+from .model import RouteProductClass, JourneyLeg
 
 
 def get_first_nonwalking_leg(legs: Iterable[JourneyLeg]) -> JourneyLeg | None:
@@ -24,16 +24,6 @@ def count_trip_changes(legs: Iterable[JourneyLeg]) -> int:
             changes += 1
 
     return changes
-
-
-def get_ticket(
-    tickets: Iterable[JourneyFareTicket], person: str
-) -> JourneyFareTicket | None:
-    for ticket in tickets:
-        if ticket.person == person:
-            return ticket
-
-    return None
 
 
 def find_realtime_info(feed: gtfs_realtime_pb2.FeedMessage, realtime_trip_id: str):

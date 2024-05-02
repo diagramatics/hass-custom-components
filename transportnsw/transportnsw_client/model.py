@@ -10,17 +10,10 @@ class JourneyFareZone(BaseModel):
     pass
 
 
-class JourneyFareTicket(BaseModel):
-    id: str
-    name: str
-    comment: str
-    person: Literal["ADULT", "CHILD", "SCHOLAR", "SENIOR"]
-    priceLevel: str | None
-    priceBrutto: decimal.Decimal
-
-
 class Fare(BaseModel):
-    tickets: List[JourneyFareTicket]
+    # The Opal fare information component “TripRequestResponseJourneyFareTicket” of /trip API
+    # responses will no longer be populated from 4am on 16 October 2023.
+    # tickets: List[JourneyFareTicket]
     zones: List[JourneyFareZone] | None = Field(default=None)
 
 

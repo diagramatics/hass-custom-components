@@ -21,7 +21,6 @@ from homeassistant.helpers.update_coordinator import (
 from .transportnsw_client import ModeOfTransport
 from .transportnsw_client.model import Journey, RouteProductClass, TripRequestResponse
 from .transportnsw_client.utils import (
-    get_ticket,
     get_first_nonwalking_leg,
     count_trip_changes,
 )
@@ -54,8 +53,6 @@ ATTR_ORIGIN_LINE_NAME_SHORT = "origin_line_name_short"
 ATTR_CHANGES = "changes"
 ATTR_OCCUPANCY = "occupancy"
 ATTR_REAL_TIME_TRIP_ID = "real_time_trip_id"
-ATTR_FARE_TYPE = "fare_type"
-ATTR_FARE_PRICE = "fare_price"
 ATTR_LATITUDE = "latitude"
 ATTR_LONGITUDE = "longitude"
 
@@ -73,7 +70,6 @@ CONF_COORDINATOR = "coordinator"
 CONF_STOP_ID = "stop_id"
 CONF_DESTINATION_STOP_ID = "destination_stop_id"
 CONF_NUM_JOURNEYS = "num_journeys"
-CONF_FARE_TYPE = "fare_type"
 CONF_MODES_OF_TRANSPORT = "modes_of_transport"
 CONF_ALLOWED_MOT = []
 
@@ -84,7 +80,6 @@ CONF_TRIP_SCHEMA = vol.Schema(
         vol.Required(CONF_STOP_ID): cv.string,
         vol.Required(CONF_DESTINATION_STOP_ID): cv.string,
         vol.Optional(CONF_NUM_JOURNEYS, default=1): cv.positive_int,
-        vol.Optional(CONF_FARE_TYPE, default="ADULT"): cv.string,
         vol.Optional(CONF_MODES_OF_TRANSPORT): vol.All(
             cv.ensure_list, [vol.In(get_args(ModeOfTransport))]
         ),
@@ -115,78 +110,12 @@ def setup_platform(
                 stop_id=route[CONF_STOP_ID],
                 destination_stop_id=route[CONF_DESTINATION_STOP_ID],
                 trip_index=trip_index,
-                fare_type=route[CONF_FARE_TYPE],
             )
         )
 
         # TODO: Add Sensor(s) for service information/delays?
 
-        for fare_type in ["ADULT", "CHILD", "SCHOLAR", "SENIOR"]:
-            entities.append(
-                TransportNSWJourneyFareSensor(
-                    coordinator,
-                    name=route[CONF_NAME],
-                    stop_id=route[CONF_STOP_ID],
-                    destination_stop_id=route[CONF_DESTINATION_STOP_ID],
-                    trip_index=trip_index,
-                    fare_type=fare_type,
-                )
-            )
-
     add_entities(entities)
-
-
-class TransportNSWJourneyFareSensor(
-    CoordinatorEntity[DataUpdateCoordinator[List[Tuple[Journey, Any]]]], SensorEntity
-):
-    _attr_attribution = "Data provided by Transport NSW"
-    _attr_native_unit_of_measurement = CURRENCY_DOLLAR
-    _attr_icon = "mdi:cash"
-
-    def __init__(
-        self,
-        coordinator: DataUpdateCoordinator[List[Tuple[Journey, Any]]],
-        name: str,
-        stop_id: str,
-        destination_stop_id: str,
-        trip_index: int,
-        fare_type: str,
-    ) -> None:
-        """Initialize the sensor."""
-        super().__init__(coordinator)
-
-        self._name = name
-        self._stop_id = stop_id
-        self._destination_stop_id = destination_stop_id
-        self._trip_index = trip_index
-        self._fare_type = fare_type
-
-        self._attr_name = f"{name} {trip_index + 1} {self._fare_type.capitalize()} Fare"
-        self._attr_unique_id = f"tnsw-{self._stop_id}-{self._destination_stop_id}-{self._trip_index}-fare-{self._fare_type}"
-
-    def _get_journey(self) -> Tuple[Journey, Any] | None:
-        if (
-            self.coordinator.data is None
-            or len(self.coordinator.data) <= self._trip_index
-        ):
-            return None
-
-        return self.coordinator.data[self._trip_index]
-
-    @property
-    def native_value(self):
-        """Return the state of the sensor."""
-        journey, _ = self._get_journey()
-        if journey is None:
-            return None
-
-        ticket = get_ticket(journey.fare.tickets, self._fare_type)
-        return str(ticket.priceBrutto)
-
-    @property
-    def available(self) -> bool:
-        """Return if entity is available."""
-        return self.coordinator.data is not None
 
 
 class TransportNSWJourneySensor(
@@ -202,7 +131,6 @@ class TransportNSWJourneySensor(
         stop_id: str,
         destination_stop_id: str,
         trip_index: int,
-        fare_type: str,
     ) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
@@ -211,7 +139,6 @@ class TransportNSWJourneySensor(
         self._stop_id = stop_id
         self._destination_stop_id = destination_stop_id
         self._trip_index = trip_index
-        self._fare_type = fare_type
 
         self._attr_name = f"{name} {trip_index + 1}"
         self._attr_unique_id = (
@@ -261,8 +188,6 @@ class TransportNSWJourneySensor(
         destination = dest_leg.destination
         trip_changes = count_trip_changes(journey.legs)
 
-        ticket = get_ticket(journey.fare.tickets, self._fare_type)
-
         tz = dt_util.get_time_zone(self.hass.config.time_zone)
 
         return {
@@ -305,8 +230,6 @@ class TransportNSWJourneySensor(
             ATTR_CHANGES: trip_changes,
             ATTR_OCCUPANCY: origin_leg.destination.properties.occupancy,
             ATTR_REAL_TIME_TRIP_ID: origin_leg.transportation.properties.realtime_trip_id,
-            ATTR_FARE_TYPE: ticket.person,
-            ATTR_FARE_PRICE: str(ticket.priceBrutto),
             ATTR_LATITUDE: realtime.vehicle.position.latitude
             if realtime is not None
             else None,

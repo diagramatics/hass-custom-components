@@ -1,4 +1,5 @@
 """The transportnsw component."""
+
 import datetime
 import logging
 import threading
@@ -58,15 +59,15 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     for trip in conf[CONF_TRIPS]:
 
-        async def async_update_data() -> List[Tuple[Journey, Any]]:
+        async def async_update_data(t) -> List[Tuple[Journey, Any]]:
             resp = await hass.async_add_executor_job(
                 client.get_trip,
-                trip[CONF_STOP_ID],
-                trip[CONF_DESTINATION_STOP_ID],
-                trip[CONF_NUM_JOURNEYS],
+                t[CONF_STOP_ID],
+                t[CONF_DESTINATION_STOP_ID],
+                t[CONF_NUM_JOURNEYS],
                 None,
                 None,
-                trip.get(CONF_MODES_OF_TRANSPORT),
+                t.get(CONF_MODES_OF_TRANSPORT),
             )
             res = []
 
@@ -99,7 +100,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             _LOGGER,
             name="sensor",
             update_interval=SCAN_INTERVAL,
-            update_method=async_update_data,
+            update_method=lambda trip=trip: async_update_data(trip),
         )
         await coordinator.async_refresh()
 
